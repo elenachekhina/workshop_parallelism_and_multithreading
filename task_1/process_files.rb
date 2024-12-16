@@ -1,3 +1,5 @@
+require 'async/scheduler'
+
 # Генерация файлов для примера
 files = 5.times.map do |i|
   filename = "file_#{i}.txt"
@@ -5,17 +7,27 @@ files = 5.times.map do |i|
   filename
 end
 
+def process_file(file)
+  File.open(file, 'r') do |f|
+    f.each_line { |line| puts line }
+  end
+end
+
 # puts Sequentially
 def process_files_sequentially(files)
-  files.each do |file|
-    File.open(file, 'r') do |f|
-      f.each_line { |line| puts line }
+  Fiber.schedule do
+    files.each do |file|
+      Fiber.schedule { process_file(file) }
     end
   end
 end
+
+scheduler = Async::Scheduler.new
+Fiber.set_scheduler(scheduler)
 
 start_time = Time.now
 process_files_sequentially(files)
 end_time = Time.now
 
-puts "Время выполнения Sequentially: #{end_time - start_time} секунд" # Время выполнения Sequentially: 2.596501 секунд
+# было: Время выполнения Sequentially: 5.024249 секунд
+File.open('logs', 'w') { |f| f.puts("Время выполнения: #{end_time - start_time} секунд") }
